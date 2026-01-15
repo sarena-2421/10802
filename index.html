@@ -1,712 +1,787 @@
-import React, { useState, useEffect } from 'react';
-import { BookOpen, CheckCircle, XCircle, ChevronRight, ChevronLeft, RotateCcw, Home, Award, Grid, Flag, Zap, Feather, Scroll } from 'lucide-react';
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>108課綱學測國文模擬App - 文言文測驗</title>
+    <!-- 引入 React 和 ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- 引入 Babel 用於解析 JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; }
+        .font-serif { font-family: 'Noto Serif TC', serif; }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-[#eaeae5] h-screen w-full flex justify-center items-center overflow-hidden">
+    <div id="root" class="w-full max-w-3xl h-full bg-white shadow-2xl relative"></div>
 
-// -----------------------------------------------------------------------------
-// 1. 真實題庫範例 (Real Classical Questions)
-// -----------------------------------------------------------------------------
+    <script type="text/babel">
+        const { useState, useEffect } = React;
 
-const REAL_QUESTION_EXAMPLES = [
-  {
-    id: 'real_1',
-    type: 'single',
-    category: '一字多義',
-    text: '下列各組「」內的字，意義相同的是：',
-    options: [
-      '師道「之」不傳也久矣 / 句讀「之」不知',
-      '「以」猶碧樹，況枯木乎 / 不「以」物喜，不以己悲',
-      '微「斯」人，吾誰與歸 / 登「斯」樓也，則有去國懷鄉',
-      '百「廢」具興 / 政通人「和」'
-    ],
-    correctAnswer: [2],
-    explanation: 'A. 助詞，無義 / 代詞，指文章； B. 連詞，尚且 / 連詞，因為； C. 代詞，此(正確)； D. 選項D非對比字，且「廢」指廢弛之事，「和」指和樂，意義不同。',
-    difficulty: '中'
-  },
-  {
-    id: 'real_2',
-    type: 'single',
-    category: '詩詞鑑賞',
-    text: '閱讀下文：「昔我往矣，楊柳依依；今我來思，雨雪霏霏。」(《詩經·采薇》)，關於本詩的敘述，何者正確？',
-    options: [
-      '描寫一位女子思念遠征丈夫的悲哀',
-      '以「楊柳」與「雨雪」對比離家與歸家時的不同季節與心境',
-      '「依依」形容楊柳隨風擺動的聲音',
-      '「雨雪」是指下雨又下雪，象徵天氣惡劣'
-    ],
-    correctAnswer: [1],
-    explanation: 'A. 描寫戍卒返鄉； B. 正確，以景襯情，樂景寫哀，哀景寫樂； C. 依依形容擺動的樣子及留戀之情； D. 雨(ㄩˋ)雪，指下雪。',
-    difficulty: '中'
-  },
-  {
-    id: 'real_3',
-    type: 'group',
-    category: '文言閱讀',
-    passageTitle: '左忠毅公軼事 (節錄)',
-    passageContent: `及左公下廠獄，史朝夕獄門外。逆閹防伺甚嚴，雖家僕不得近。久之，聞左公被炮烙，旦夕且死，持五十金，涕泣謀於禁卒，卒感焉。一日，使史更敝衣，草屨，背筐，手長鑱，為除不潔者，引入。`,
-    questions: [
-      {
-        id: 'real_3_1',
-        type: 'single',
-        text: '文中「謀於禁卒」的「謀」字，解釋最為恰當的是：',
-        options: [
-          '謀害',
-          '商量、請託',
-          '計謀',
-          '欺騙'
-        ],
-        correctAnswer: [1],
-        explanation: '此處指史可法拿錢去「商量/請託」獄卒讓他進去探監。'
-      },
-      {
-        id: 'real_3_2',
-        type: 'single',
-        text: '史可法為了探望左光斗，做了哪些偽裝？',
-        options: [
-          '假扮成獄卒的親戚',
-          '穿著破舊衣服，假裝是清掃穢物的清潔工',
-          '賄賂閹黨高層，取得通行證',
-          '躲在送飯的籮筐中混入'
-        ],
-        correctAnswer: [1],
-        explanation: '文中「使史更敝衣，草屨，背筐，手長鑱，為除不潔者」即指偽裝成清潔工。'
-      }
-    ]
-  },
-  {
-    id: 'real_4',
-    type: 'multi',
-    category: '修辭句式',
-    text: '下列文句，何者使用了「倒裝」句法？',
-    options: [
-      '微斯人，吾誰與歸？',
-      '何陋之有？',
-      '馬首是瞻',
-      '蓮，花之君子者也',
-      '苔痕上階綠，草色入簾青'
-    ],
-    correctAnswer: [0, 1, 2],
-    explanation: 'A. 吾與誰歸 (賓語前置)； B. 有何陋 (賓語前置)； C. 瞻馬首 (賓語前置)； D. 判斷句； E. 對偶句。',
-    difficulty: '難'
-  },
-  {
-    id: 'real_5',
-    type: 'single',
-    category: '核心古文',
-    text: '關於《燭之武退秦師》一文，下列敘述何者錯誤？',
-    options: [
-      '選自《左傳》，以記言為主',
-      '燭之武說服秦伯的主要論點是「亡鄭有益於晉，而無益於秦」',
-      '文中展現了燭之武高超的外交辭令',
-      '秦晉圍鄭的原因是鄭國無禮於晉，且貳於楚'
-    ],
-    correctAnswer: [1],
-    explanation: 'B. 錯誤。燭之武的論點是「亡鄭陪鄰(有利於晉)，鄰之厚，君之薄(有害於秦)」，即亡鄭對晉有利，對秦有害。',
-    difficulty: '易'
-  }
-];
+        // -----------------------------------------------------------------------------
+        // 0. 內建圖標元件 (移除外部依賴以確保 GitHub Pages 可執行)
+        // -----------------------------------------------------------------------------
+        const Icons = {
+            Scroll: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M8 19H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3"/><path d="M16 5h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M8 21v-2a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M8 3v2a2 2 0 0 1 2 2h4a2 2 0 0 1 2-2V3"/><line x1="12" x2="12" y1="17" y2="17.01"/></svg>,
+            Feather: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><line x1="16" x2="2" y1="8" y2="22"/><line x1="17.5" x2="9" y1="15" y2="15"/></svg>,
+            Home: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+            Grid: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>,
+            Flag: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>,
+            ChevronLeft: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="m15 18-6-6 6-6"/></svg>,
+            ChevronRight: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="m9 18 6-6-6-6"/></svg>,
+            Award: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>,
+            XCircle: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>,
+            CheckCircle: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
+            RotateCcw: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>,
+            BookOpen: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>,
+            Zap: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        };
 
-// -----------------------------------------------------------------------------
-// 2. 擴充版 文言文資料庫 (Massive Database)
-// -----------------------------------------------------------------------------
+        // -----------------------------------------------------------------------------
+        // 1. 真實題庫範例
+        // -----------------------------------------------------------------------------
+        const REAL_QUESTION_EXAMPLES = [
+            {
+                id: 'real_1',
+                type: 'single',
+                category: '一字多義',
+                text: '下列各組「」內的字，意義相同的是：',
+                options: [
+                    '師道「之」不傳也久矣 / 句讀「之」不知',
+                    '「以」猶碧樹，況枯木乎 / 不「以」物喜，不以己悲',
+                    '微「斯」人，吾誰與歸 / 登「斯」樓也，則有去國懷鄉',
+                    '百「廢」具興 / 政通人「和」'
+                ],
+                correctAnswer: [2],
+                explanation: 'A. 助詞，無義 / 代詞，指文章； B. 連詞，尚且 / 連詞，因為； C. 代詞，此(正確)； D. 選項D非對比字，且「廢」指廢弛之事，「和」指和樂，意義不同。',
+                difficulty: '中'
+            },
+            {
+                id: 'real_2',
+                type: 'single',
+                category: '詩詞鑑賞',
+                text: '閱讀下文：「昔我往矣，楊柳依依；今我來思，雨雪霏霏。」(《詩經·采薇》)，關於本詩的敘述，何者正確？',
+                options: [
+                    '描寫一位女子思念遠征丈夫的悲哀',
+                    '以「楊柳」與「雨雪」對比離家與歸家時的不同季節與心境',
+                    '「依依」形容楊柳隨風擺動的聲音',
+                    '「雨雪」是指下雨又下雪，象徵天氣惡劣'
+                ],
+                correctAnswer: [1],
+                explanation: 'A. 描寫戍卒返鄉； B. 正確，以景襯情，樂景寫哀，哀景寫樂； C. 依依形容擺動的樣子及留戀之情； D. 雨(ㄩˋ)雪，指下雪。',
+                difficulty: '中'
+            },
+            {
+                id: 'real_3',
+                type: 'group',
+                category: '文言閱讀',
+                passageTitle: '左忠毅公軼事 (節錄)',
+                passageContent: `及左公下廠獄，史朝夕獄門外。逆閹防伺甚嚴，雖家僕不得近。久之，聞左公被炮烙，旦夕且死，持五十金，涕泣謀於禁卒，卒感焉。一日，使史更敝衣，草屨，背筐，手長鑱，為除不潔者，引入。`,
+                questions: [
+                    {
+                        id: 'real_3_1',
+                        type: 'single',
+                        text: '文中「謀於禁卒」的「謀」字，解釋最為恰當的是：',
+                        options: [
+                            '謀害',
+                            '商量、請託',
+                            '計謀',
+                            '欺騙'
+                        ],
+                        correctAnswer: [1],
+                        explanation: '此處指史可法拿錢去「商量/請託」獄卒讓他進去探監。'
+                    },
+                    {
+                        id: 'real_3_2',
+                        type: 'single',
+                        text: '史可法為了探望左光斗，做了哪些偽裝？',
+                        options: [
+                            '假扮成獄卒的親戚',
+                            '穿著破舊衣服，假裝是清掃穢物的清潔工',
+                            '賄賂閹黨高層，取得通行證',
+                            '躲在送飯的籮筐中混入'
+                        ],
+                        correctAnswer: [1],
+                        explanation: '文中「使史更敝衣，草屨，背筐，手長鑱，為除不潔者」即指偽裝成清潔工。'
+                    }
+                ]
+            },
+            {
+                id: 'real_4',
+                type: 'multi',
+                category: '修辭句式',
+                text: '下列文句，何者使用了「倒裝」句法？',
+                options: [
+                    '微斯人，吾誰與歸？',
+                    '何陋之有？',
+                    '馬首是瞻',
+                    '蓮，花之君子者也',
+                    '苔痕上階綠，草色入簾青'
+                ],
+                correctAnswer: [0, 1, 2],
+                explanation: 'A. 吾與誰歸 (賓語前置)； B. 有何陋 (賓語前置)； C. 瞻馬首 (賓語前置)； D. 判斷句； E. 對偶句。',
+                difficulty: '難'
+            },
+            {
+                id: 'real_5',
+                type: 'single',
+                category: '核心古文',
+                text: '關於《燭之武退秦師》一文，下列敘述何者錯誤？',
+                options: [
+                    '選自《左傳》，以記言為主',
+                    '燭之武說服秦伯的主要論點是「亡鄭有益於晉，而無益於秦」',
+                    '文中展現了燭之武高超的外交辭令',
+                    '秦晉圍鄭的原因是鄭國無禮於晉，且貳於楚'
+                ],
+                correctAnswer: [1],
+                explanation: 'B. 錯誤。燭之武的論點是「亡鄭陪鄰(有利於晉)，鄰之厚，君之薄(有害於秦)」，即亡鄭對晉有利，對秦有害。',
+                difficulty: '易'
+            }
+        ];
 
-// 虛詞庫 (20+)
-const PARTICLES = [
-  { word: '之', usages: ['助詞(無義)', '代詞(他/它)', '介詞(往/去)', '助詞(的)'], example: '杳如黃鶴「之」去不復返' },
-  { word: '其', usages: ['代詞(他的)', '副詞(難道/恐怕)', '助詞(無義)', '代詞(其中)'], example: '奔車朽索，「其」可忽乎' },
-  { word: '乃', usages: ['於是/就', '竟然/卻', '是', '你'], example: '好雨知時節，當春「乃」發生' },
-  { word: '以', usages: ['因為', '用/憑藉', '以為/認為', '連詞(而)'], example: '不「以」物喜，不以己悲' },
-  { word: '為', usages: ['被', '替/給', '是', '作為'], example: '身死國滅，「為」天下笑' },
-  { word: '而', usages: ['連詞(表轉折,卻)', '連詞(表並列)', '連詞(表承接)', '代詞(你)'], example: '青，取之於藍，「而」青於藍' },
-  { word: '則', usages: ['就/便', '卻/轉折', '規範/準則', '效法'], example: '居廟堂之高，「則」憂其民' },
-  { word: '且', usages: ['尚且', '將要', '而且', '暫且'], example: '北山愚公者，年「且」九十' },
-  { word: '若', usages: ['如果', '像', '你', '至於'], example: '「若」舍鄭以為東道主' },
-  { word: '所', usages: ['地方', '被(表被動)', '助詞(所+動=名)', '許/左右'], example: '此人一一為具言「所」聞' },
-  { word: '因', usages: ['因為', '憑藉/依靠', '沿襲', '於是'], example: '「因」利乘便，宰割天下' },
-  { word: '於', usages: ['在', '被', '比', '給'], example: '苛政猛「於」虎也' },
-  { word: '與', usages: ['和/跟', '給予', '贊同', '疑問助詞(歟)'], example: '微斯人，吾誰「與」歸' },
-  { word: '焉', usages: ['代詞(之)', '哪裡/怎麼', '句末助詞', '樣子(形容詞尾)'], example: '積土成山，風雨興「焉」' },
-  { word: '矣', usages: ['了(表完成)', '感嘆', '句末助詞', '罷了'], example: '暮春者，春服既成，冠者五六人...詠而歸「矣」' },
-  { word: '蓋', usages: ['原來是', '大概', '勝過(蓋過)', '發語詞'], example: '「蓋」一癩蛤蟆也' },
-  { word: '夫', usages: ['那(發語詞)', '成年男子', '丈夫', '助詞(無義)'], example: '「夫」戰，勇氣也' },
-  { word: '莫', usages: ['沒有誰', '不要', '晚/暮', '不能'], example: '「莫」春者，春服既成' },
-  { word: '曾', usages: ['曾經', '竟然(乃)', '通「增」', '重孫'], example: '「曾」不若孀妻弱子' }
-];
+        // -----------------------------------------------------------------------------
+        // 2. 擴充版資料庫
+        // -----------------------------------------------------------------------------
+        const PARTICLES = [
+            { word: '之', usages: ['助詞(無義)', '代詞(他/它)', '介詞(往/去)', '助詞(的)'], example: '杳如黃鶴「之」去不復返' },
+            { word: '其', usages: ['代詞(他的)', '副詞(難道/恐怕)', '助詞(無義)', '代詞(其中)'], example: '奔車朽索，「其」可忽乎' },
+            { word: '乃', usages: ['於是/就', '竟然/卻', '是', '你'], example: '好雨知時節，當春「乃」發生' },
+            { word: '以', usages: ['因為', '用/憑藉', '以為/認為', '連詞(而)'], example: '不「以」物喜，不以己悲' },
+            { word: '為', usages: ['被', '替/給', '是', '作為'], example: '身死國滅，「為」天下笑' },
+            { word: '而', usages: ['連詞(表轉折,卻)', '連詞(表並列)', '連詞(表承接)', '代詞(你)'], example: '青，取之於藍，「而」青於藍' },
+            { word: '則', usages: ['就/便', '卻/轉折', '規範/準則', '效法'], example: '居廟堂之高，「則」憂其民' },
+            { word: '且', usages: ['尚且', '將要', '而且', '暫且'], example: '北山愚公者，年「且」九十' },
+            { word: '若', usages: ['如果', '像', '你', '至於'], example: '「若」舍鄭以為東道主' },
+            { word: '所', usages: ['地方', '被(表被動)', '助詞(所+動=名)', '許/左右'], example: '此人一一為具言「所」聞' },
+            { word: '因', usages: ['因為', '憑藉/依靠', '沿襲', '於是'], example: '「因」利乘便，宰割天下' },
+            { word: '於', usages: ['在', '被', '比', '給'], example: '苛政猛「於」虎也' },
+            { word: '與', usages: ['和/跟', '給予', '贊同', '疑問助詞(歟)'], example: '微斯人，吾誰「與」歸' },
+            { word: '焉', usages: ['代詞(之)', '哪裡/怎麼', '句末助詞', '樣子(形容詞尾)'], example: '積土成山，風雨興「焉」' },
+            { word: '矣', usages: ['了(表完成)', '感嘆', '句末助詞', '罷了'], example: '暮春者，春服既成，冠者五六人...詠而歸「矣」' },
+            { word: '蓋', usages: ['原來是', '大概', '勝過(蓋過)', '發語詞'], example: '「蓋」一癩蛤蟆也' },
+            { word: '夫', usages: ['那(發語詞)', '成年男子', '丈夫', '助詞(無義)'], example: '「夫」戰，勇氣也' },
+            { word: '莫', usages: ['沒有誰', '不要', '晚/暮', '不能'], example: '「莫」春者，春服既成' },
+            { word: '曾', usages: ['曾經', '竟然(乃)', '通「增」', '重孫'], example: '「曾」不若孀妻弱子' }
+        ];
 
-// 意象庫 (20+)
-const IMAGERY = [
-  { object: '楊柳', mean: '送別、留戀', season: '春' },
-  { object: '菊花', mean: '隱逸、高潔', season: '秋' },
-  { object: '梅花', mean: '堅貞、不屈', season: '冬' },
-  { object: '梧桐', mean: '淒涼、悲傷', season: '秋' },
-  { object: '杜鵑(子規)', mean: '悲苦、思歸', season: '春末' },
-  { object: '鴻雁', mean: '書信、思鄉', season: '秋' },
-  { object: '東風', mean: '春風、生機', season: '春' },
-  { object: '西風', mean: '蕭瑟、衰敗', season: '秋' },
-  { object: '明月', mean: '思鄉、懷人', season: '四季皆有' },
-  { object: '落日/夕陽', mean: '遲暮、感傷', season: '不限' },
-  { object: '孤帆', mean: '漂泊、離別', season: '不限' },
-  { object: '青鳥', mean: '信使', season: '不限' },
-  { object: '芭蕉', mean: '愁苦、孤獨', season: '雨天/秋' },
-  { object: '流水', mean: '時光流逝、愁緒', season: '不限' },
-  { object: '浮雲', mean: '遊子、小人', season: '不限' },
-  { object: '登高', mean: '思鄉、懷古', season: '秋(重陽)' },
-  { object: '搗衣', mean: '思念征夫', season: '秋' },
-  { object: '採蓮', mean: '男女情愛、歡愉', season: '夏' },
-  { object: '松柏', mean: '堅貞、長壽', season: '冬' },
-  { object: '猿啼', mean: '淒涼、悲傷', season: '不限' }
-];
+        const IMAGERY = [
+            { object: '楊柳', mean: '送別、留戀', season: '春' },
+            { object: '菊花', mean: '隱逸、高潔', season: '秋' },
+            { object: '梅花', mean: '堅貞、不屈', season: '冬' },
+            { object: '梧桐', mean: '淒涼、悲傷', season: '秋' },
+            { object: '杜鵑(子規)', mean: '悲苦、思歸', season: '春末' },
+            { object: '鴻雁', mean: '書信、思鄉', season: '秋' },
+            { object: '東風', mean: '春風、生機', season: '春' },
+            { object: '西風', mean: '蕭瑟、衰敗', season: '秋' },
+            { object: '明月', mean: '思鄉、懷人', season: '四季皆有' },
+            { object: '落日/夕陽', mean: '遲暮、感傷', season: '不限' },
+            { object: '孤帆', mean: '漂泊、離別', season: '不限' },
+            { object: '青鳥', mean: '信使', season: '不限' },
+            { object: '芭蕉', mean: '愁苦、孤獨', season: '雨天/秋' },
+            { object: '流水', mean: '時光流逝、愁緒', season: '不限' },
+            { object: '浮雲', mean: '遊子、小人', season: '不限' },
+            { object: '登高', mean: '思鄉、懷古', season: '秋(重陽)' },
+            { object: '搗衣', mean: '思念征夫', season: '秋' },
+            { object: '採蓮', mean: '男女情愛、歡愉', season: '夏' },
+            { object: '松柏', mean: '堅貞、長壽', season: '冬' },
+            { object: '猿啼', mean: '淒涼、悲傷', season: '不限' }
+        ];
 
-// 名句庫 (40+)
-const CLASSIC_QUOTES = [
-  { q: '逝者如斯夫，不舍晝夜', src: '論語', mean: '感嘆時光易逝' },
-  { q: '先天下之憂而憂，後天下之樂而樂', src: '岳陽樓記', mean: '以國家興亡為己任的抱負' },
-  { q: '不以物喜，不以己悲', src: '岳陽樓記', mean: '超脫外在環境，心境平和' },
-  { q: '醉翁之意不在酒，在乎山水之間也', src: '醉翁亭記', mean: '本意不在此，而在別處' },
-  { q: '師者，所以傳道、受業、解惑也', src: '師說', mean: '教師的職責' },
-  { q: '青，取之於藍，而青於藍', src: '勸學', mean: '學生勝過老師，或後天學習的重要' },
-  { q: '鍥而舍之，朽木不折；鍥而不舍，金石可鏤', src: '勸學', mean: '持之以恆的重要性' },
-  { q: '登泰山而小天下', src: '孟子', mean: '眼界開闊，見識深遠' },
-  { q: '生於憂患，死於安樂', src: '孟子', mean: '艱苦的環境能磨練人，安逸的環境易使人沉淪' },
-  { q: '往者不可諫，來者猶可追', src: '論語', mean: '過去的已無法挽回，未來的還可以把握' },
-  { q: '知其不可而為之', src: '論語', mean: '孔子那種勇於擔當、不計成敗的精神' },
-  { q: '朝聞道，夕死可矣', src: '論語', mean: '對真理的執著追求' },
-  { q: '己所不欲，勿施於人', src: '論語', mean: '推己及人，恕道精神' },
-  { q: '無為而無不為', src: '道德經', mean: '順應自然，不強求，則無事不成' },
-  { q: '吾生也有涯，而知也無涯', src: '莊子', mean: '生命有限，知識無限，應追求養生保身之道(莊子原意)' },
-  { q: '刑于寡妻，至于兄弟，以御于家邦', src: '孟子', mean: '修身齊家治國，由內而外' },
-  { q: '風蕭蕭兮易水寒，壯士一去兮不復還', src: '史記', mean: '荊軻刺秦王的悲壯決心' },
-  { q: '項莊舞劍，意在沛公', src: '史記', mean: '表面做某事，實則另有所圖' },
-  { q: '人為刀俎，我為魚肉', src: '史記', mean: '處於被動受制於人的危險境地' },
-  { q: '大行不顧細謹，大禮不辭小讓', src: '史記', mean: '做大事不拘泥小節' },
-  { q: '文章千古事，得失寸心知', src: '杜甫詩', mean: '文章價值流傳千古，其中甘苦只有作者知道' },
-  { q: '同是天涯淪落人，相逢何必曾相識', src: '琵琶行', mean: '有相似遭遇的人容易產生共鳴' },
-  { q: '曾經滄海難為水，除卻巫山不是雲', src: '元稹詩', mean: '經歷過深情或大事，其他的都看不上眼' },
-  { q: '兩情若是久長時，又豈在朝朝暮暮', src: '秦觀詞', mean: '真愛不需時刻黏在一起' },
-  { q: '眾里尋他千百度，驀然回首，那人卻在，燈火闌珊處', src: '辛棄疾詞', mean: '尋找的目標往往在不經意間發現' }
-];
+        const CLASSIC_QUOTES = [
+            { q: '逝者如斯夫，不舍晝夜', src: '論語', mean: '感嘆時光易逝' },
+            { q: '先天下之憂而憂，後天下之樂而樂', src: '岳陽樓記', mean: '以國家興亡為己任的抱負' },
+            { q: '不以物喜，不以己悲', src: '岳陽樓記', mean: '超脫外在環境，心境平和' },
+            { q: '醉翁之意不在酒，在乎山水之間也', src: '醉翁亭記', mean: '本意不在此，而在別處' },
+            { q: '師者，所以傳道、受業、解惑也', src: '師說', mean: '教師的職責' },
+            { q: '青，取之於藍，而青於藍', src: '勸學', mean: '學生勝過老師，或後天學習的重要' },
+            { q: '鍥而舍之，朽木不折；鍥而不舍，金石可鏤', src: '勸學', mean: '持之以恆的重要性' },
+            { q: '登泰山而小天下', src: '孟子', mean: '眼界開闊，見識深遠' },
+            { q: '生於憂患，死於安樂', src: '孟子', mean: '艱苦的環境能磨練人，安逸的環境易使人沉淪' },
+            { q: '往者不可諫，來者猶可追', src: '論語', mean: '過去的已無法挽回，未來的還可以把握' },
+            { q: '知其不可而為之', src: '論語', mean: '孔子那種勇於擔當、不計成敗的精神' },
+            { q: '朝聞道，夕死可矣', src: '論語', mean: '對真理的執著追求' },
+            { q: '己所不欲，勿施於人', src: '論語', mean: '推己及人，恕道精神' },
+            { q: '無為而無不為', src: '道德經', mean: '順應自然，不強求，則無事不成' },
+            { q: '吾生也有涯，而知也無涯', src: '莊子', mean: '生命有限，知識無限，應追求養生保身之道(莊子原意)' },
+            { q: '刑于寡妻，至于兄弟，以御于家邦', src: '孟子', mean: '修身齊家治國，由內而外' },
+            { q: '風蕭蕭兮易水寒，壯士一去兮不復還', src: '史記', mean: '荊軻刺秦王的悲壯決心' },
+            { q: '項莊舞劍，意在沛公', src: '史記', mean: '表面做某事，實則另有所圖' },
+            { q: '人為刀俎，我為魚肉', src: '史記', mean: '處於被動受制於人的危險境地' },
+            { q: '大行不顧細謹，大禮不辭小讓', src: '史記', mean: '做大事不拘泥小節' },
+            { q: '文章千古事，得失寸心知', src: '杜甫詩', mean: '文章價值流傳千古，其中甘苦只有作者知道' },
+            { q: '同是天涯淪落人，相逢何必曾相識', src: '琵琶行', mean: '有相似遭遇的人容易產生共鳴' },
+            { q: '曾經滄海難為水，除卻巫山不是雲', src: '元稹詩', mean: '經歷過深情或大事，其他的都看不上眼' },
+            { q: '兩情若是久長時，又豈在朝朝暮暮', src: '秦觀詞', mean: '真愛不需時刻黏在一起' },
+            { q: '眾里尋他千百度，驀然回首，那人卻在，燈火闌珊處', src: '辛棄疾詞', mean: '尋找的目標往往在不經意間發現' }
+        ];
 
-// 一字多義庫 (Polysemy)
-const POLYSEMY = [
-  { char: '絕', meanings: ['斷絕/停止', '橫渡', '極/非常', '卓越/獨一無二'] },
-  { char: '書', meanings: ['書信', '書籍', '書寫/記載', '字體'] },
-  { char: '信', meanings: ['書信', '誠實/信用', '相信', '隨意/任憑', '信物'] },
-  { char: '道', meanings: ['道路', '道理/真理', '說/講', '方法', '引導(導)'] },
-  { char: '謝', meanings: ['道歉', '推辭/拒絕', '凋謝', '感謝', '告訴'] },
-  { char: '兵', meanings: ['兵器', '士兵', '軍隊', '戰爭'] },
-  { char: '固', meanings: ['堅固', '本來/原本', '堅持/固執', '豈/難道'] },
-  { char: '素', meanings: ['白色', '空/白白地', '一向/平日', '樸素'] },
-  { char: '負', meanings: ['背負', '辜負', '失敗', '憑藉/依仗'] },
-  { char: '適', meanings: ['去/往', '適合', '剛好', '出嫁', '貶謫'] }
-];
+        const POLYSEMY = [
+            { char: '絕', meanings: ['斷絕/停止', '橫渡', '極/非常', '卓越/獨一無二'] },
+            { char: '書', meanings: ['書信', '書籍', '書寫/記載', '字體'] },
+            { char: '信', meanings: ['書信', '誠實/信用', '相信', '隨意/任憑', '信物'] },
+            { char: '道', meanings: ['道路', '道理/真理', '說/講', '方法', '引導(導)'] },
+            { char: '謝', meanings: ['道歉', '推辭/拒絕', '凋謝', '感謝', '告訴'] },
+            { char: '兵', meanings: ['兵器', '士兵', '軍隊', '戰爭'] },
+            { char: '固', meanings: ['堅固', '本來/原本', '堅持/固執', '豈/難道'] },
+            { char: '素', meanings: ['白色', '空/白白地', '一向/平日', '樸素'] },
+            { char: '負', meanings: ['背負', '辜負', '失敗', '憑藉/依仗'] },
+            { char: '適', meanings: ['去/往', '適合', '剛好', '出嫁', '貶謫'] }
+        ];
 
-// 國學常識/歷史 (History)
-const HISTORY = [
-  { topic: '史書體例', q: '下列關於史書體例的敘述，正確的是：', opts: ['《史記》為紀傳體之祖', '《漢書》為編年體之祖(錯，是斷代史)', '《資治通鑑》為國別體(錯，是編年體)', '《戰國策》為紀傳體(錯，是國別體)'], ansIdx: 0 },
-  { topic: '九流十家', q: '關於先秦諸子百家，下列配對正確的是：', opts: ['法家：韓非、李斯', '道家：孔子、孟子', '墨家：莊子、老子', '名家：孫武、吳起'], ansIdx: 0 },
-  { topic: '唐代詩派', q: '關於唐代詩歌流派，下列敘述何者正確？', opts: ['王維、孟浩然屬於「山水田園派」', '岑參、高適屬於「浪漫詩派」', '李白屬於「社會寫實派」', '杜甫屬於「邊塞詩派」'], ansIdx: 0 },
-  { topic: '古文運動', q: '關於「古文運動」，下列敘述何者錯誤？', opts: ['由韓愈、柳宗元發起', '主張恢復漢魏以前的散文傳統', '反對六朝駢文的浮華', '發生於元明清時期'], ansIdx: 3 },
-  { topic: '詞的別稱', q: '下列何者不是「詞」的別稱？', opts: ['詩餘', '長短句', '曲子詞', '傳奇'], ansIdx: 3 }
-];
+        const HISTORY = [
+            { topic: '史書體例', q: '下列關於史書體例的敘述，正確的是：', opts: ['《史記》為紀傳體之祖', '《漢書》為編年體之祖(錯，是斷代史)', '《資治通鑑》為國別體(錯，是編年體)', '《戰國策》為紀傳體(錯，是國別體)'], ansIdx: 0 },
+            { topic: '九流十家', q: '關於先秦諸子百家，下列配對正確的是：', opts: ['法家：韓非、李斯', '道家：孔子、孟子', '墨家：莊子、老子', '名家：孫武、吳起'], ansIdx: 0 },
+            { topic: '唐代詩派', q: '關於唐代詩歌流派，下列敘述何者正確？', opts: ['王維、孟浩然屬於「山水田園派」', '岑參、高適屬於「浪漫詩派」', '李白屬於「社會寫實派」', '杜甫屬於「邊塞詩派」'], ansIdx: 0 },
+            { topic: '古文運動', q: '關於「古文運動」，下列敘述何者錯誤？', opts: ['由韓愈、柳宗元發起', '主張恢復漢魏以前的散文傳統', '反對六朝駢文的浮華', '發生於元明清時期'], ansIdx: 3 },
+            { topic: '詞的別稱', q: '下列何者不是「詞」的別稱？', opts: ['詩餘', '長短句', '曲子詞', '傳奇'], ansIdx: 3 }
+        ];
 
-const generateClassicalMock = (type) => {
-  const rand = (arr) => arr[Math.floor(Math.random() * arr.length)];
-  const shuffle = (arr) => [...arr].sort(() => 0.5 - Math.random());
+        // -----------------------------------------------------------------------------
+        // Helper: Fisher-Yates Shuffle
+        // -----------------------------------------------------------------------------
+        const fisherYatesShuffle = (array) => {
+            let currentIndex = array.length, randomIndex;
+            while (currentIndex !== 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+            }
+            return array;
+        };
 
-  if (type === 'particle') {
-    const p = rand(PARTICLES);
-    const correctUsage = rand(p.usages);
-    const otherUsages = p.usages.filter(u => u !== correctUsage);
-    
-    // 隨機變換題幹，避免重複感
-    const qTextVariants = [
-      `下列文句中「${p.word}」字的用法與解釋，何者正確？`,
-      `關於虛詞「${p.word}」的用法，下列敘述何者最為恰當？`,
-      `若在文言文中看到「${p.word}」字，下列哪種解釋符合「${p.example}」的語境？`
-    ];
-    
-    return {
-      category: '虛詞辨析',
-      text: rand(qTextVariants),
-      options: [
-        `在「${p.example}」一句中，解作「${correctUsage}」`,
-        `在「${p.example}」一句中，解作「${otherUsages[0] || '語助詞'}」`,
-        `在「${p.example}」一句中，解作「${otherUsages[1] || '動詞'}」`,
-        `在「${p.example}」一句中，解作「${otherUsages[2] || '名詞'}」`
-      ],
-      explanation: `「${p.word}」字義多變，在該例句中，根據上下文意，最恰當的解釋應為「${correctUsage}」。`,
-      correctIndex: 0
-    };
-  } else if (type === 'imagery') {
-    const img = rand(IMAGERY);
-    const wrongSeasons = ['春','夏','秋','冬'].filter(s => s !== img.season);
-    
-    const qTextVariants = [
-      `古典詩詞中常以「${img.object}」作為意象。下列敘述何者正確？`,
-      `若詩句中出現「${img.object}」，通常象徵何種情感或季節？`,
-      `關於「${img.object}」在古典文學中的象徵意義，下列何者最為常見？`
-    ];
+        // -----------------------------------------------------------------------------
+        // Generator
+        // -----------------------------------------------------------------------------
+        const generateClassicalMock = (type, itemIndex, variantCount) => {
+            const shuffle = (arr) => [...arr].sort(() => 0.5 - Math.random());
+            
+            // 變體文字：如果出現多次，題幹稍微改變
+            const getQText = (baseText, variant) => {
+                const prefixes = ["", "請判斷", "試問"];
+                return `${prefixes[variant % prefixes.length]} ${baseText}`;
+            };
 
-    return {
-      category: '詩詞鑑賞',
-      text: rand(qTextVariants),
-      options: [
-        `常象徵「${img.mean}」，多見於${img.season}季詩詞中`,
-        `常象徵「喜慶」，多見於${wrongSeasons[0] || '夏'}季詩詞中`,
-        `常象徵「富貴」，多見於${wrongSeasons[1] || '冬'}季詩詞中`,
-        `常象徵「隱逸」，但與季節無關`
-      ],
-      explanation: `「${img.object}」在古典詩詞中通常象徵${img.mean}，且多與${img.season}季有關。`,
-      correctIndex: 0
-    };
-  } else if (type === 'quote') {
-    const q = rand(CLASSIC_QUOTES);
-    return {
-      category: '文意理解',
-      text: `關於名句「${q.q}」(${q.src})，下列解說何者最為切當？`,
-      options: [
-        `${q.mean}`,
-        `形容景色優美，令人流連忘返`,
-        `感嘆懷才不遇，仕途坎坷`,
-        `描寫與朋友離別時的感傷`
-      ],
-      explanation: `此句出自${q.src}，意指${q.mean}。`,
-      correctIndex: 0
-    };
-  } else if (type === 'polysemy') {
-    // 一字多義
-    const poly = rand(POLYSEMY);
-    const targetMeaning = rand(poly.meanings);
-    const distractors = poly.meanings.filter(m => m !== targetMeaning).slice(0, 3);
-    // 補足選項
-    while (distractors.length < 3) distractors.push('無義');
+            if (type === 'particle') {
+                const p = PARTICLES[itemIndex % PARTICLES.length];
+                // 輪替正確用法
+                const correctUsageIndex = variantCount % p.usages.length;
+                const correctUsage = p.usages[correctUsageIndex];
+                const otherUsages = p.usages.filter(u => u !== correctUsage);
+                
+                const qTextVariants = [
+                    `下列文句中「${p.word}」字的用法與解釋，何者正確？`,
+                    `關於虛詞「${p.word}」的用法，下列敘述何者最為恰當？`,
+                    `若在文言文中看到「${p.word}」字，下列哪種解釋符合「${p.example}」的語境？`
+                ];
+                
+                return {
+                    category: '虛詞辨析',
+                    text: qTextVariants[variantCount % qTextVariants.length],
+                    options: [
+                        `在「${p.example}」一句中，解作「${correctUsage}」`,
+                        `在「${p.example}」一句中，解作「${otherUsages[0] || '語助詞'}」`,
+                        `在「${p.example}」一句中，解作「${otherUsages[1] || '動詞'}」`,
+                        `在「${p.example}」一句中，解作「${otherUsages[2] || '名詞'}」`
+                    ],
+                    explanation: `「${p.word}」字義多變，在該例句中，根據上下文意，最恰當的解釋應為「${correctUsage}」。`,
+                    correctIndex: 0
+                };
+            } else if (type === 'imagery') {
+                const img = IMAGERY[itemIndex % IMAGERY.length];
+                const wrongSeasons = ['春','夏','秋','冬'].filter(s => s !== img.season);
+                
+                const qTextVariants = [
+                    `古典詩詞中常以「${img.object}」作為意象。下列敘述何者正確？`,
+                    `若詩句中出現「${img.object}」，通常象徵何種情感或季節？`,
+                    `關於「${img.object}」在古典文學中的象徵意義，下列何者最為常見？`
+                ];
 
-    return {
-      category: '一字多義',
-      text: `在古文中，「${poly.char}」字有多種解釋。下列哪一個選項的解釋為「${targetMeaning}」？`,
-      options: [
-        `符合「${targetMeaning}」義 (正確選項)`,
-        `解作「${distractors[0]}」`,
-        `解作「${distractors[1]}」`,
-        `解作「${distractors[2]}」`
-      ],
-      explanation: `「${poly.char}」字常見義項包含：${poly.meanings.join('、')}。本題測驗是否能辨識出「${targetMeaning}」的用法。`,
-      correctIndex: 0
-    };
-  } else if (type === 'history') {
-    // 國學常識
-    const h = rand(HISTORY);
-    return {
-      category: '國學常識',
-      text: h.q,
-      options: h.opts,
-      explanation: `本題測驗${h.topic}。正確答案為選項A。`,
-      correctIndex: h.ansIdx
-    };
-  } else {
-    // Grammar mock
-    return {
-      category: '句式判斷',
-      text: '下列文句，何者屬於「被動句」？',
-      options: [
-        '身死人手，為天下笑者',
-        '知之者不如好之者',
-        '求仁而得仁，又何怨',
-        '蓮，花之君子者也'
-      ],
-      explanation: '「為天下笑」即「被天下人嘲笑」，「為」字表被動。B為比較句，C為疑問句，D為判斷句。',
-      correctIndex: 0
-    };
-  }
-};
+                return {
+                    category: '詩詞鑑賞',
+                    text: qTextVariants[variantCount % qTextVariants.length],
+                    options: [
+                        `常象徵「${img.mean}」，多見於${img.season}季詩詞中`,
+                        `常象徵「喜慶」，多見於${wrongSeasons[0] || '夏'}季詩詞中`,
+                        `常象徵「富貴」，多見於${wrongSeasons[1] || '冬'}季詩詞中`,
+                        `常象徵「隱逸」，但與季節無關`
+                    ],
+                    explanation: `「${img.object}」在古典詩詞中通常象徵${img.mean}，且多與${img.season}季有關。`,
+                    correctIndex: 0
+                };
+            } else if (type === 'quote') {
+                const q = CLASSIC_QUOTES[itemIndex % CLASSIC_QUOTES.length];
+                return {
+                    category: '文意理解',
+                    text: getQText(`關於名句「${q.q}」(${q.src})，下列解說何者最為切當？`, variantCount),
+                    options: [
+                        `${q.mean}`,
+                        `形容景色優美，令人流連忘返`,
+                        `感嘆懷才不遇，仕途坎坷`,
+                        `描寫與朋友離別時的感傷`
+                    ],
+                    explanation: `此句出自${q.src}，意指${q.mean}。`,
+                    correctIndex: 0
+                };
+            } else if (type === 'polysemy') {
+                const poly = POLYSEMY[itemIndex % POLYSEMY.length];
+                const targetMeaning = poly.meanings[variantCount % poly.meanings.length];
+                const distractors = poly.meanings.filter(m => m !== targetMeaning).slice(0, 3);
+                while (distractors.length < 3) distractors.push('無義');
 
-const generateMockQuestions = (startId, count) => {
-  const mocks = [];
-  const types = ['particle', 'imagery', 'quote', 'polysemy', 'history', 'grammar'];
-  
-  for (let i = 0; i < count; i++) {
-    const isMulti = Math.random() > 0.85; 
-    
-    // 生成內容樣板 (增加隨機性)
-    const templateType = types[i % types.length]; // 輪替使用不同題型，而非完全隨機，確保分佈均勻
-    const content = generateClassicalMock(templateType);
-    
-    // 處理選項順序
-    let finalOptions = content.options.map((text, idx) => ({ 
-      text, 
-      isCorrect: idx === content.correctIndex 
-    }));
-    finalOptions = finalOptions.sort(() => 0.5 - Math.random());
-    
-    // 找出正確答案的 Index
-    let correctIndices = [];
-    finalOptions.forEach((opt, idx) => {
-      if (opt.isCorrect) correctIndices.push(idx);
-    });
+                return {
+                    category: '一字多義',
+                    text: getQText(`在古文中，「${poly.char}」字有多種解釋。下列哪一個選項的解釋為「${targetMeaning}」？`, variantCount),
+                    options: [
+                        `符合「${targetMeaning}」義 (正確選項)`,
+                        `解作「${distractors[0]}」`,
+                        `解作「${distractors[1]}」`,
+                        `解作「${distractors[2]}」`
+                    ],
+                    explanation: `「${poly.char}」字常見義項包含：${poly.meanings.join('、')}。本題測驗是否能辨識出「${targetMeaning}」的用法。`,
+                    correctIndex: 0
+                };
+            } else if (type === 'history') {
+                const h = HISTORY[itemIndex % HISTORY.length];
+                return {
+                    category: '國學常識',
+                    text: h.q,
+                    options: h.opts,
+                    explanation: `本題測驗${h.topic}。正確答案為選項A。`,
+                    correctIndex: h.ansIdx
+                };
+            } else {
+                return {
+                    category: '句式判斷',
+                    text: '下列文句，何者屬於「被動句」？',
+                    options: [
+                        '身死人手，為天下笑者',
+                        '知之者不如好之者',
+                        '求仁而得仁，又何怨',
+                        '蓮，花之君子者也'
+                    ],
+                    explanation: '「為天下笑」即「被天下人嘲笑」，「為」字表被動。B為比較句，C為疑問句，D為判斷句。',
+                    correctIndex: 0
+                };
+            }
+        };
 
-    // 多選題修正
-    if (isMulti) {
-       correctIndices = [0, 1]; // Mock 簡單處理
-       content.explanation += " (此題為模擬多選，正確答案包含 A 與 B)";
-    }
+        const generateMockQuestions = (startId, count) => {
+            const mocks = [];
+            const types = ['particle', 'imagery', 'quote', 'polysemy', 'history', 'grammar'];
+            
+            let taskPool = [];
+            
+            // 建立任務池，確保所有素材均勻出現
+            const typeDataCounts = {
+                'particle': PARTICLES.length,
+                'imagery': IMAGERY.length,
+                'quote': CLASSIC_QUOTES.length,
+                'polysemy': POLYSEMY.length,
+                'history': HISTORY.length,
+                'grammar': 1
+            };
 
-    const answerLabels = correctIndices.map(idx => String.fromCharCode(65 + idx)).join('、');
+            let totalBaseItems = 0;
+            for(let k in typeDataCounts) totalBaseItems += typeDataCounts[k];
+            
+            const loopsNeeded = Math.ceil(count / totalBaseItems) + 1;
 
-    mocks.push({
-      id: `mock_cl_${startId + i}`,
-      type: isMulti ? 'multi' : 'single',
-      category: content.category,
-      text: `[模擬 #${startId + i}] ${content.text}`,
-      options: finalOptions.map(o => o.text),
-      correctAnswer: correctIndices,
-      explanation: `${content.explanation} (本題正確答案為 ${answerLabels})`,
-      difficulty: ['易', '中', '難'][Math.floor(Math.random() * 3)]
-    });
-  }
-  return mocks;
-};
+            for (let loop = 0; loop < loopsNeeded; loop++) {
+                types.forEach(type => {
+                    const maxIdx = typeDataCounts[type];
+                    for (let i = 0; i < maxIdx; i++) {
+                        taskPool.push({ type, itemIndex: i, variantCount: loop });
+                    }
+                });
+            }
 
-// -----------------------------------------------------------------------------
-// 主程式
-// -----------------------------------------------------------------------------
+            // 使用 Fisher-Yates 洗牌
+            taskPool = fisherYatesShuffle(taskPool);
+            
+            const selectedTasks = taskPool.slice(0, count);
 
-export default function ClassicalChineseApp() {
-  const [currentScreen, setCurrentScreen] = useState('home'); 
-  const [questions, setQuestions] = useState([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [userAnswers, setUserAnswers] = useState({});
-  const [markedQuestions, setMarkedQuestions] = useState(new Set()); 
-  const [showExplanation, setShowExplanation] = useState(false);
-  const [showGrid, setShowGrid] = useState(false); 
+            selectedTasks.forEach((task, i) => {
+                const isMulti = Math.random() > 0.85; 
+                
+                const content = generateClassicalMock(task.type, task.itemIndex, task.variantCount);
+                
+                // 處理選項順序
+                let finalOptions = content.options.map((text, idx) => ({ 
+                    text, 
+                    isCorrect: idx === content.correctIndex 
+                }));
+                // 選項也洗牌
+                finalOptions = fisherYatesShuffle(finalOptions);
+                
+                let correctIndices = [];
+                finalOptions.forEach((opt, idx) => {
+                    if (opt.isCorrect) correctIndices.push(idx);
+                });
 
-  // 初始化題目
-  useEffect(() => {
-    let flattened = [];
-    
-    // 1. 真題
-    REAL_QUESTION_EXAMPLES.forEach(item => {
-      if (item.type === 'group') {
-        item.questions.forEach(q => {
-          flattened.push({
-            ...q,
-            groupTitle: item.passageTitle,
-            groupContent: item.passageContent,
-            isGroup: true
-          });
-        });
-      } else {
-        flattened.push(item);
-      }
-    });
-
-    // 2. 模擬題補足 500
-    const currentCount = flattened.length;
-    const needed = 500 - currentCount;
-    if (needed > 0) {
-      const mocks = generateMockQuestions(currentCount + 1, needed);
-      flattened = [...flattened, ...mocks];
-    }
-
-    setQuestions(flattened);
-  }, []);
-
-  const startExam = () => {
-    setCurrentQuestionIndex(0);
-    setUserAnswers({});
-    setMarkedQuestions(new Set());
-    setShowExplanation(false);
-    setShowGrid(false);
-    setCurrentScreen('quiz');
-  };
-
-  const handleAnswerSelect = (optionIndex, isMulti) => {
-    if (showExplanation) return; 
-
-    const currentQ = questions[currentQuestionIndex];
-    const qId = currentQ.id;
-    
-    setUserAnswers(prev => {
-      const currentSelected = prev[qId] || [];
-      if (isMulti) {
-        if (currentSelected.includes(optionIndex)) {
-          return { ...prev, [qId]: currentSelected.filter(i => i !== optionIndex) };
-        } else {
-          return { ...prev, [qId]: [...currentSelected, optionIndex].sort() };
-        }
-      } else {
-        return { ...prev, [qId]: [optionIndex] };
-      }
-    });
-
-    if (!isMulti) {
-      setShowExplanation(true);
-    }
-  };
-
-  const toggleMarkQuestion = () => {
-    const qId = questions[currentQuestionIndex].id;
-    setMarkedQuestions(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(qId)) newSet.delete(qId);
-      else newSet.add(qId);
-      return newSet;
-    });
-  };
-
-  const calculateScore = () => {
-    let rawScore = 0;
-    questions.forEach(q => {
-      const userAns = userAnswers[q.id] || [];
-      const correctAns = q.correctAnswer;
-      const isCorrect = userAns.length === correctAns.length && userAns.every(val => correctAns.includes(val));
-      if (isCorrect) rawScore++;
-    });
-    const percentage = (rawScore / questions.length) * 100;
-    let rank = 0;
-    if (percentage >= 90) rank = 15;
-    else if (percentage >= 85) rank = 14;
-    else if (percentage >= 80) rank = 13;
-    else if (percentage >= 70) rank = 11;
-    else if (percentage >= 60) rank = 9;
-    else rank = Math.floor(percentage / 10) + 1;
-
-    return { rawScore, total: questions.length, rank, percentage };
-  };
-
-  // ---------------------------------------------------------------------------
-  // 元件
-  // ---------------------------------------------------------------------------
-
-  const QuestionGrid = ({ closeGrid }) => (
-    <div className="fixed inset-0 bg-black/50 z-50 flex justify-end animate-fade-in">
-      <div className="w-full max-w-sm bg-white h-full shadow-2xl flex flex-col animate-slide-in-right">
-        <div className="p-4 border-b flex justify-between items-center bg-gray-50">
-          <h3 className="font-bold text-lg text-gray-800 flex items-center font-serif">
-            <Grid size={20} className="mr-2"/> 卷軸速覽 (共{questions.length}題)
-          </h3>
-          <button onClick={closeGrid} className="p-2 hover:bg-gray-200 rounded-full">
-            <XCircle size={24} className="text-gray-500"/>
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="grid grid-cols-5 gap-3">
-            {questions.map((q, idx) => {
-              const isAnswered = userAnswers[q.id] && userAnswers[q.id].length > 0;
-              const isMarked = markedQuestions.has(q.id);
-              const isCurrent = currentQuestionIndex === idx;
-              let btnClass = "h-10 w-10 rounded-lg flex items-center justify-center text-sm font-medium transition relative font-serif ";
-              if (isCurrent) btnClass += "ring-2 ring-stone-600 ring-offset-2 bg-stone-200 text-stone-800 font-bold ";
-              else if (isAnswered) btnClass += "bg-stone-600 text-white shadow-sm ";
-              else btnClass += "bg-stone-100 text-gray-500 hover:bg-stone-200 ";
-
-              return (
-                <button 
-                  key={q.id} 
-                  onClick={() => { setCurrentQuestionIndex(idx); setShowExplanation(false); closeGrid(); }}
-                  className={btnClass}
-                >
-                  {idx + 1}
-                  {isMarked && <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border border-white"></span>}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const HomeScreen = () => (
-    <div className="flex flex-col items-center justify-center h-full p-6 space-y-8 animate-fade-in bg-[#f5f5f0]">
-      <div className="text-center space-y-4 max-w-lg">
-        <div className="bg-stone-800 p-6 rounded-full inline-block mb-2 shadow-xl">
-          <Scroll size={64} className="text-stone-100" />
-        </div>
-        <h1 className="text-4xl font-extrabold text-stone-900 tracking-tight font-serif">古文觀止 • 學測專項</h1>
-        <p className="text-xl text-stone-600 font-serif">文言文 • 詩詞 • 國學常識</p>
-        <div className="flex flex-wrap justify-center gap-2 mt-4 font-serif">
-           <span className="px-3 py-1 bg-white border border-stone-300 rounded-full text-sm text-stone-600">500題庫</span>
-           <span className="px-3 py-1 bg-white border border-stone-300 rounded-full text-sm text-stone-600">即時釋義</span>
-           <span className="px-3 py-1 bg-white border border-stone-300 rounded-full text-sm text-stone-600">隨機變換</span>
-        </div>
-      </div>
-      <div className="w-full max-w-sm">
-        <button 
-          onClick={startExam}
-          className="w-full flex items-center justify-center p-5 bg-stone-800 text-stone-50 rounded-xl shadow-lg hover:bg-stone-900 transition transform hover:-translate-y-1 group font-serif"
-        >
-          <div className="bg-white/10 p-2 rounded-full mr-3 group-hover:scale-110 transition">
-            <Feather size={24} className="text-stone-100" />
-          </div>
-          <div className="text-left">
-            <span className="block font-bold text-xl">開始試煉</span>
-            <span className="text-sm text-stone-300">挑戰海量題庫</span>
-          </div>
-        </button>
-      </div>
-    </div>
-  );
-
-  const QuizScreen = () => {
-    const question = questions[currentQuestionIndex];
-    if (!question) return <div>Loading...</div>;
-    const isMulti = question.type === 'multi' || (question.correctAnswer.length > 1);
-    const currentAns = userAnswers[question.id] || [];
-    const isMarked = markedQuestions.has(question.id);
-
-    return (
-      <div className="flex flex-col h-full bg-[#fafaf9] relative font-serif">
-        {showGrid && <QuestionGrid closeGrid={() => setShowGrid(false)} />}
-        
-        <div className="bg-white shadow-sm px-4 py-3 flex justify-between items-center sticky top-0 z-10 border-b border-stone-200">
-          <div className="flex items-center space-x-3">
-            <button onClick={() => setCurrentScreen('home')} className="p-2 hover:bg-stone-100 rounded-lg text-stone-500">
-              <Home size={20} />
-            </button>
-            <button onClick={() => setShowGrid(true)} className="flex items-center space-x-2 px-3 py-1.5 bg-stone-100 hover:bg-stone-200 rounded-lg transition text-stone-700 font-medium">
-              <Grid size={18} />
-              <span>{currentQuestionIndex + 1} / {questions.length}</span>
-            </button>
-          </div>
-          <button onClick={toggleMarkQuestion} className={`p-2 rounded-lg transition ${isMarked ? 'bg-red-100 text-red-500' : 'text-stone-400 hover:bg-stone-100'}`}>
-             <Flag size={20} fill={isMarked ? "currentColor" : "none"} />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 max-w-4xl mx-auto w-full scroll-smooth">
-          {question.isGroup && (
-            <div className="bg-stone-50 rounded-xl p-6 mb-6 shadow-sm border-l-4 border-stone-600">
-              <div className="flex items-center justify-between mb-3">
-                 <h3 className="font-bold text-lg text-stone-900">{question.groupTitle}</h3>
-                 <span className="text-xs bg-stone-200 text-stone-700 px-2 py-1 rounded">古文閱測</span>
-              </div>
-              <div className="prose prose-stone max-w-none text-stone-800 leading-loose whitespace-pre-wrap text-lg">
-                {question.groupContent}
-              </div>
-            </div>
-          )}
-
-          <div className="bg-white rounded-xl p-6 shadow-sm ring-1 ring-stone-100">
-            <div className="flex items-center space-x-2 mb-4">
-               <span className={`text-xs font-bold px-2 py-1 rounded ${isMulti ? 'bg-orange-100 text-orange-800' : 'bg-stone-100 text-stone-800'}`}>
-                {isMulti ? '多選題' : '單選題'}
-              </span>
-              <span className="text-xs text-stone-500 bg-stone-50 px-2 py-1 rounded border border-stone-200">
-                {question.category}
-              </span>
-            </div>
-
-            <h2 className="text-xl font-medium text-stone-900 mb-8 leading-relaxed">
-              {question.text}
-            </h2>
-
-            <div className="space-y-4">
-              {question.options.map((option, idx) => {
-                const isSelected = currentAns.includes(idx);
-                let btnClass = "w-full text-left p-4 rounded-xl border transition-all flex items-start space-x-4 relative overflow-hidden ";
-                if (showExplanation) {
-                  if (question.correctAnswer.includes(idx)) btnClass += "border-green-600 bg-green-50 text-green-900";
-                  else if (isSelected) btnClass += "border-red-500 bg-red-50 text-red-900";
-                  else btnClass += "border-stone-100 text-stone-400 opacity-60";
-                } else {
-                  if (isSelected) btnClass += "border-stone-600 bg-stone-100 text-stone-900 shadow-md";
-                  else btnClass += "border-stone-200 hover:border-stone-400 hover:bg-stone-50 text-stone-700";
+                if (isMulti) {
+                    correctIndices = [0, 1]; // Mock 簡單處理
+                    content.explanation += " (此題為模擬多選，正確答案包含 A 與 B)";
                 }
 
-                return (
-                  <button key={idx} onClick={() => handleAnswerSelect(idx, isMulti)} className={btnClass} disabled={showExplanation}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold border transition-colors ${
-                      isSelected ? 'bg-stone-700 border-stone-700 text-white' : 'border-stone-300 text-stone-500'
-                    } ${showExplanation && question.correctAnswer.includes(idx) ? '!bg-green-600 !border-green-600 !text-white' : ''}`}>
-                      {['甲','乙','丙','丁'][idx] || String.fromCharCode(65 + idx)}
+                const answerLabels = correctIndices.map(idx => String.fromCharCode(65 + idx)).join('、');
+
+                mocks.push({
+                    id: `mock_cl_${startId + i}`,
+                    type: isMulti ? 'multi' : 'single',
+                    category: content.category,
+                    text: `[文言模擬 #${startId + i}] ${content.text}`,
+                    options: finalOptions.map(o => o.text),
+                    correctAnswer: correctIndices,
+                    explanation: `${content.explanation} (本題正確答案為 ${answerLabels})`,
+                    difficulty: ['易', '中', '難'][Math.floor(Math.random() * 3)]
+                });
+            });
+            return mocks;
+        };
+
+        // -----------------------------------------------------------------------------
+        // App Logic
+        // -----------------------------------------------------------------------------
+        function App() {
+            const [currentScreen, setCurrentScreen] = useState('home'); 
+            const [questions, setQuestions] = useState([]);
+            const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+            const [userAnswers, setUserAnswers] = useState({});
+            const [markedQuestions, setMarkedQuestions] = useState(new Set()); 
+            const [showExplanation, setShowExplanation] = useState(false);
+            const [showGrid, setShowGrid] = useState(false); 
+
+            useEffect(() => {
+                let flattened = [];
+                
+                REAL_QUESTION_EXAMPLES.forEach(item => {
+                    if (item.type === 'group') {
+                        item.questions.forEach(q => {
+                            flattened.push({
+                                ...q,
+                                groupTitle: item.passageTitle,
+                                groupContent: item.passageContent,
+                                isGroup: true
+                            });
+                        });
+                    } else {
+                        flattened.push(item);
+                    }
+                });
+
+                const currentCount = flattened.length;
+                const needed = 500 - currentCount;
+                if (needed > 0) {
+                    const mocks = generateMockQuestions(currentCount + 1, needed);
+                    flattened = [...flattened, ...mocks];
+                }
+
+                setQuestions(flattened);
+            }, []);
+
+            const startExam = () => {
+                setCurrentQuestionIndex(0);
+                setUserAnswers({});
+                setMarkedQuestions(new Set());
+                setShowExplanation(false);
+                setShowGrid(false);
+                setCurrentScreen('quiz');
+            };
+
+            const handleAnswerSelect = (optionIndex, isMulti) => {
+                if (showExplanation) return; 
+
+                const currentQ = questions[currentQuestionIndex];
+                const qId = currentQ.id;
+                
+                setUserAnswers(prev => {
+                    const currentSelected = prev[qId] || [];
+                    if (isMulti) {
+                        if (currentSelected.includes(optionIndex)) {
+                            return { ...prev, [qId]: currentSelected.filter(i => i !== optionIndex) };
+                        } else {
+                            return { ...prev, [qId]: [...currentSelected, optionIndex].sort() };
+                        }
+                    } else {
+                        return { ...prev, [qId]: [optionIndex] };
+                    }
+                });
+
+                if (!isMulti) {
+                    setShowExplanation(true);
+                }
+            };
+
+            const toggleMarkQuestion = () => {
+                const qId = questions[currentQuestionIndex].id;
+                setMarkedQuestions(prev => {
+                    const newSet = new Set(prev);
+                    if (newSet.has(qId)) newSet.delete(qId);
+                    else newSet.add(qId);
+                    return newSet;
+                });
+            };
+
+            const calculateScore = () => {
+                let rawScore = 0;
+                questions.forEach(q => {
+                    const userAns = userAnswers[q.id] || [];
+                    const correctAns = q.correctAnswer;
+                    const isCorrect = userAns.length === correctAns.length && userAns.every(val => correctAns.includes(val));
+                    if (isCorrect) rawScore++;
+                });
+                const percentage = (rawScore / questions.length) * 100;
+                let rank = 0;
+                if (percentage >= 90) rank = 15;
+                else if (percentage >= 85) rank = 14;
+                else if (percentage >= 80) rank = 13;
+                else if (percentage >= 70) rank = 11;
+                else if (percentage >= 60) rank = 9;
+                else rank = Math.floor(percentage / 10) + 1;
+
+                return { rawScore, total: questions.length, rank, percentage };
+            };
+
+            // 安全檢查：確保 q 存在
+            const q = questions[currentQuestionIndex];
+            const isMulti = q && (q.type === 'multi' || (q.correctAnswer && q.correctAnswer.length > 1));
+            const currentAns = q ? (userAnswers[q.id] || []) : [];
+            const isMarked = q ? markedQuestions.has(q.id) : false;
+
+            // ---------------------------------------------------------------------------
+            // Views
+            // ---------------------------------------------------------------------------
+
+            const QuestionGrid = ({ closeGrid }) => (
+                <div className="fixed inset-0 bg-black/50 z-50 flex justify-end animate-fade-in">
+                    <div className="w-full max-w-sm bg-white h-full shadow-2xl flex flex-col animate-slide-in-right">
+                        <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+                            <h3 className="font-bold text-lg text-gray-800 flex items-center font-serif">
+                                <Icons.Grid size={20} className="mr-2"/> 卷軸速覽
+                            </h3>
+                            <button onClick={closeGrid} className="p-2 hover:bg-gray-200 rounded-full">
+                                <Icons.XCircle size={24} className="text-gray-500"/>
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-4">
+                            <div className="grid grid-cols-5 gap-3">
+                                {questions.map((qItem, idx) => {
+                                    const isAnswered = userAnswers[qItem.id] && userAnswers[qItem.id].length > 0;
+                                    const isMarkedItem = markedQuestions.has(qItem.id);
+                                    const isCurrent = currentQuestionIndex === idx;
+                                    let btnClass = "h-10 w-10 rounded-lg flex items-center justify-center text-sm font-medium transition relative font-serif ";
+                                    if (isCurrent) btnClass += "ring-2 ring-stone-600 ring-offset-2 bg-stone-200 text-stone-800 font-bold ";
+                                    else if (isAnswered) btnClass += "bg-stone-600 text-white shadow-sm ";
+                                    else btnClass += "bg-stone-100 text-gray-500 hover:bg-stone-200 ";
+
+                                    return (
+                                        <button 
+                                            key={qItem.id} 
+                                            onClick={() => { setCurrentQuestionIndex(idx); setShowExplanation(false); closeGrid(); }}
+                                            className={btnClass}
+                                        >
+                                            {idx + 1}
+                                            {isMarkedItem && <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border border-white"></span>}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
                     </div>
-                    <span className="pt-1 text-lg">{option}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {showExplanation && (
-              <div className="mt-8 bg-amber-50 p-5 rounded-xl border border-amber-100 animate-fade-in-up">
-                <div className="flex items-center space-x-2 text-amber-900 font-bold mb-3">
-                  <Award size={20} />
-                  <span>詳解</span>
                 </div>
-                <p className="text-amber-900 leading-relaxed">{question.explanation}</p>
-              </div>
-            )}
-          </div>
-        </div>
+            );
 
-        <div className="bg-white border-t border-stone-200 p-4 flex justify-between items-center safe-area-bottom">
-          <button 
-            onClick={() => { setShowExplanation(false); setCurrentQuestionIndex(prev => Math.max(0, prev - 1)); }}
-            disabled={currentQuestionIndex === 0}
-            className="flex items-center space-x-2 px-4 py-2 rounded-full text-stone-600 hover:bg-stone-100 disabled:opacity-30 transition"
-          >
-            <ChevronLeft size={20} /> <span>上一題</span>
-          </button>
-          {!showExplanation ? (
-             isMulti ? (
-                <button onClick={() => setShowExplanation(true)} className="bg-orange-600 hover:bg-orange-700 text-white px-8 py-2.5 rounded-full font-bold shadow-md transition">
-                  確認答案
-                </button>
-             ) : (
-                <span className="text-sm text-stone-400 font-medium hidden md:block animate-pulse">請點選選項</span>
-             )
-          ) : (
-             <button 
-                onClick={() => {
-                  if (currentQuestionIndex < questions.length - 1) { setShowExplanation(false); setCurrentQuestionIndex(prev => prev + 1); } 
-                  else { setCurrentScreen('result'); setShowGrid(false); }
-                }}
-                className="bg-stone-800 hover:bg-stone-900 text-white px-8 py-2.5 rounded-full font-bold shadow-md flex items-center transition"
-              >
-                {currentQuestionIndex === questions.length - 1 ? '完成試煉' : '下一題'} <ChevronRight size={18} className="ml-1"/>
-              </button>
-          )}
-          {(!showExplanation && !isMulti) && <div className="w-20 md:hidden"></div>}
-        </div>
-      </div>
-    );
-  };
+            if (currentScreen === 'home') return (
+                <div className="flex flex-col items-center justify-center h-full p-6 space-y-8 animate-fade-in bg-[#f5f5f0]">
+                    <div className="text-center space-y-4 max-w-lg">
+                        <div className="bg-stone-800 p-6 rounded-full inline-block mb-2 shadow-xl">
+                            <Icons.Scroll size={64} className="text-stone-100" />
+                        </div>
+                        <h1 className="text-4xl font-extrabold text-stone-900 tracking-tight font-serif">古文觀止 • 學測專項</h1>
+                        <p className="text-xl text-stone-600 font-serif">文言文 • 詩詞 • 國學常識</p>
+                        <div className="flex flex-wrap justify-center gap-2 mt-4 font-serif">
+                           <span className="px-3 py-1 bg-white border border-stone-300 rounded-full text-sm text-stone-600">500題庫</span>
+                           <span className="px-3 py-1 bg-white border border-stone-300 rounded-full text-sm text-stone-600">即時釋義</span>
+                           <span className="px-3 py-1 bg-white border border-stone-300 rounded-full text-sm text-stone-600">隨機變換</span>
+                        </div>
+                    </div>
+                    <div className="w-full max-w-sm">
+                        <button 
+                            onClick={startExam}
+                            className="w-full flex items-center justify-center p-5 bg-stone-800 text-stone-50 rounded-xl shadow-lg hover:bg-stone-900 transition transform hover:-translate-y-1 group font-serif"
+                        >
+                            <div className="bg-white/10 p-2 rounded-full mr-3 group-hover:scale-110 transition">
+                                <Icons.Feather size={24} className="text-stone-100" />
+                            </div>
+                            <div className="text-left">
+                                <span className="block font-bold text-xl">開始試煉</span>
+                                <span className="text-sm text-stone-300">挑戰海量題庫</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            );
 
-  const ResultScreen = () => {
-    const { rawScore, total, rank, percentage } = calculateScore();
-    return (
-      <div className="flex flex-col items-center h-full bg-[#f5f5f0] p-6 overflow-y-auto font-serif">
-        <div className="w-full max-w-md space-y-6 mt-8">
-          <div className="bg-white rounded-3xl shadow-xl p-8 text-center relative overflow-hidden">
-            <h2 className="text-3xl font-extrabold text-stone-800 mb-2">試煉結束</h2>
-            <div className="flex justify-center my-8">
-              <div className="text-6xl font-black text-stone-800">{percentage.toFixed(0)}<span className="text-2xl text-stone-400 font-normal">分</span></div>
-            </div>
-            <div className="grid grid-cols-2 gap-4 text-left">
-              <div className="bg-stone-100 p-4 rounded-2xl">
-                <p className="text-xs text-stone-500 font-bold mb-1">答對題數</p>
-                <p className="text-2xl font-bold text-stone-800">{rawScore} / {total}</p>
-              </div>
-              <div className="bg-stone-100 p-4 rounded-2xl">
-                <p className="text-xs text-stone-500 font-bold mb-1">換算級分</p>
-                <p className="text-2xl font-bold text-stone-800">{rank}</p>
-              </div>
-            </div>
-          </div>
-          <div className="space-y-3">
-            <button onClick={() => setCurrentScreen('home')} className="w-full bg-stone-800 hover:bg-stone-900 text-white py-4 rounded-2xl font-bold shadow-lg transition flex items-center justify-center space-x-2">
-              <RotateCcw size={20} /> <span>重返首頁</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
+            if (currentScreen === 'result') {
+                const { rawScore, total, rank, percentage } = calculateScore();
+                return (
+                    <div className="flex flex-col items-center h-full bg-[#f5f5f0] p-6 overflow-y-auto font-serif">
+                        <div className="w-full max-w-md space-y-6 mt-8">
+                            <div className="bg-white rounded-3xl shadow-xl p-8 text-center relative overflow-hidden">
+                                <h2 className="text-3xl font-extrabold text-stone-800 mb-2">試煉結束</h2>
+                                <div className="flex justify-center my-8">
+                                    <div className="text-6xl font-black text-stone-800">{percentage.toFixed(0)}<span className="text-2xl text-stone-400 font-normal">分</span></div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 text-left">
+                                    <div className="bg-stone-100 p-4 rounded-2xl">
+                                        <p className="text-xs text-stone-500 font-bold mb-1">答對題數</p>
+                                        <p className="text-2xl font-bold text-stone-800">{rawScore} / {total}</p>
+                                    </div>
+                                    <div className="bg-stone-100 p-4 rounded-2xl">
+                                        <p className="text-xs text-stone-500 font-bold mb-1">換算級分</p>
+                                        <p className="text-2xl font-bold text-stone-800">{rank}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="space-y-3">
+                                <button onClick={() => setCurrentScreen('home')} className="w-full bg-stone-800 hover:bg-stone-900 text-white py-4 rounded-2xl font-bold shadow-lg transition flex items-center justify-center space-x-2">
+                                    <Icons.RotateCcw size={20} /> <span>重返首頁</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
 
-  return (
-    <div className="h-screen w-full bg-stone-200 flex justify-center">
-      <div className="w-full max-w-3xl h-full bg-white shadow-2xl overflow-hidden flex flex-col relative">
-        {currentScreen === 'home' && <HomeScreen />}
-        {currentScreen === 'quiz' && <QuizScreen />}
-        {currentScreen === 'result' && <ResultScreen />}
-      </div>
-    </div>
-  );
-}
+            // 確保有題目才渲染
+            if (!q) return <div className="flex items-center justify-center h-full text-xl font-serif text-stone-500">卷軸展開中...</div>;
+
+            return (
+                <div className="flex flex-col h-full bg-[#fafaf9] relative font-serif">
+                    {showGrid && <QuestionGrid closeGrid={() => setShowGrid(false)} />}
+                    
+                    <div className="bg-white shadow-sm px-4 py-3 flex justify-between items-center sticky top-0 z-10 border-b border-stone-200">
+                        <div className="flex items-center space-x-3">
+                            <button onClick={() => setCurrentScreen('home')} className="p-2 hover:bg-stone-100 rounded-lg text-stone-500">
+                                <Icons.Home size={20} />
+                            </button>
+                            <button onClick={() => setShowGrid(true)} className="flex items-center space-x-2 px-3 py-1.5 bg-stone-100 hover:bg-stone-200 rounded-lg transition text-stone-700 font-medium">
+                                <Icons.Grid size={18} />
+                                <span>{currentQuestionIndex + 1} / {questions.length}</span>
+                            </button>
+                        </div>
+                        <button onClick={toggleMarkQuestion} className={`p-2 rounded-lg transition ${isMarked ? 'bg-red-100 text-red-500' : 'text-stone-400 hover:bg-stone-100'}`}>
+                            <Icons.Flag size={20} fill={isMarked ? "currentColor" : "none"} />
+                        </button>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-4 md:p-6 max-w-4xl mx-auto w-full scroll-smooth">
+                        {q.isGroup && (
+                            <div className="bg-stone-50 rounded-xl p-6 mb-6 shadow-sm border-l-4 border-stone-600">
+                                <div className="flex items-center justify-between mb-3">
+                                    <h3 className="font-bold text-lg text-stone-900">{q.groupTitle}</h3>
+                                    <span className="text-xs bg-stone-200 text-stone-700 px-2 py-1 rounded">古文閱測</span>
+                                </div>
+                                <div className="prose prose-stone max-w-none text-stone-800 leading-loose whitespace-pre-wrap text-lg">
+                                    {q.groupContent}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="bg-white rounded-xl p-6 shadow-sm ring-1 ring-stone-100">
+                            <div className="flex items-center space-x-2 mb-4">
+                                <span className={`text-xs font-bold px-2 py-1 rounded ${isMulti ? 'bg-orange-100 text-orange-800' : 'bg-stone-100 text-stone-800'}`}>
+                                    {isMulti ? '多選題' : '單選題'}
+                                </span>
+                                <span className="text-xs text-stone-500 bg-stone-50 px-2 py-1 rounded border border-stone-200">
+                                    {q.category}
+                                </span>
+                            </div>
+
+                            <h2 className="text-xl font-medium text-stone-900 mb-8 leading-relaxed">
+                                {q.text}
+                            </h2>
+
+                            <div className="space-y-4">
+                                {q.options.map((option, idx) => {
+                                    const isSelected = currentAns.includes(idx);
+                                    let btnClass = "w-full text-left p-4 rounded-xl border transition-all flex items-start space-x-4 relative overflow-hidden ";
+                                    if (showExplanation) {
+                                        if (q.correctAnswer.includes(idx)) btnClass += "border-green-600 bg-green-50 text-green-900";
+                                        else if (isSelected) btnClass += "border-red-500 bg-red-50 text-red-900";
+                                        else btnClass += "border-stone-100 text-stone-400 opacity-60";
+                                    } else {
+                                        if (isSelected) btnClass += "border-stone-600 bg-stone-100 text-stone-900 shadow-md";
+                                        else btnClass += "border-stone-200 hover:border-stone-400 hover:bg-stone-50 text-stone-700";
+                                    }
+
+                                    return (
+                                        <button key={idx} onClick={() => handleAnswerSelect(idx, isMulti)} className={btnClass} disabled={showExplanation}>
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold border transition-colors ${
+                                                isSelected ? 'bg-stone-700 border-stone-700 text-white' : 'border-stone-300 text-stone-500'
+                                            } ${showExplanation && q.correctAnswer.includes(idx) ? '!bg-green-600 !border-green-600 !text-white' : ''}`}>
+                                                {['甲','乙','丙','丁'][idx] || String.fromCharCode(65 + idx)}
+                                            </div>
+                                            <span className="pt-1 text-lg">{option}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {showExplanation && (
+                                <div className="mt-8 bg-amber-50 p-5 rounded-xl border border-amber-100 animate-fade-in-up">
+                                    <div className="flex items-center space-x-2 text-amber-900 font-bold mb-3">
+                                        <Icons.Award size={20} />
+                                        <span>詳解</span>
+                                    </div>
+                                    <p className="text-amber-900 leading-relaxed">{q.explanation}</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="bg-white border-t border-stone-200 p-4 flex justify-between items-center safe-area-bottom">
+                        <button 
+                            onClick={() => { setShowExplanation(false); setCurrentQuestionIndex(prev => Math.max(0, prev - 1)); }}
+                            disabled={currentQuestionIndex === 0}
+                            className="flex items-center space-x-2 px-4 py-2 rounded-full text-stone-600 hover:bg-stone-100 disabled:opacity-30 transition"
+                        >
+                            <Icons.ChevronLeft size={20} /> <span>上一題</span>
+                        </button>
+                        {!showExplanation ? (
+                            isMulti ? (
+                                <button onClick={() => setShowExplanation(true)} className="bg-orange-600 hover:bg-orange-700 text-white px-8 py-2.5 rounded-full font-bold shadow-md transition">
+                                    確認答案
+                                </button>
+                            ) : (
+                                <span className="text-sm text-stone-400 font-medium hidden md:block animate-pulse">請點選選項</span>
+                            )
+                        ) : (
+                            <button 
+                                onClick={() => {
+                                    if (currentQuestionIndex < questions.length - 1) { setShowExplanation(false); setCurrentQuestionIndex(prev => prev + 1); } 
+                                    else { setCurrentScreen('result'); setShowGrid(false); }
+                                }}
+                                className="bg-stone-800 hover:bg-stone-900 text-white px-8 py-2.5 rounded-full font-bold shadow-md flex items-center transition"
+                            >
+                                {currentQuestionIndex === questions.length - 1 ? '完成試煉' : '下一題'} <Icons.ChevronRight size={18} className="ml-1"/>
+                            </button>
+                        )}
+                        {(!showExplanation && !isMulti) && <div className="w-20 md:hidden"></div>}
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
